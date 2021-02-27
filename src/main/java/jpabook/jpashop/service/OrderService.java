@@ -62,4 +62,9 @@ public class OrderService {
         return orderRepository.findAll(orderSearch);
     }
 
+    //모두 검색
+    public List<Order> findAllOrders() {
+        return orderRepository.findAll();
+    }
+
 }
