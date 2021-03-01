@@ -1,7 +1,8 @@
 package jpabook.jpashop.repository;
 
-import jpabook.jpashop.domain.Member;
+
 import jpabook.jpashop.domain.Order;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -65,4 +66,19 @@ public class OrderRepository {
                         "join fetch o.delivery d", Order.class)
                 .getResultList();
     }
+
+    public List<Order> findAllWithItem() {
+        return em.createQuery(
+                //JPA의 distinct는 객체를 가져올 때 같은 ID 값이 있므면 중복 제거해준다.
+                "select distinct o " +
+                          "from Order o " +
+                          "join fetch o.member m " +
+                          "join fetch o.delivery d " +
+                          "join fetch o.orderItems oi " +
+                          "join fetch oi.item i", Order.class)
+                .setFirstResult(1)
+                .setMaxResults(100)
+                .getResultList();
+    }
+
 }
