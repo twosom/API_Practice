@@ -6,19 +6,25 @@ import jpabook.jpashop.domain.Order;
 import jpabook.jpashop.domain.OrderItem;
 import jpabook.jpashop.domain.OrderStatus;
 import jpabook.jpashop.repository.OrderRepository;
+import jpabook.jpashop.repository.order.query.OrderFlatDto;
+import jpabook.jpashop.repository.order.query.OrderItemQueryDto;
 import jpabook.jpashop.repository.order.query.OrderQueryDto;
 import jpabook.jpashop.repository.order.query.OrderQueryRepository;
-import lombok.Data;
+
+import jpabook.jpashop.service.query.OrderQueryService;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.*;
 
 @RestController
 @RequiredArgsConstructor
@@ -43,22 +49,28 @@ public class OrderApiController {
 
     @GetMapping("/api/v2/orders")
     public List<OrderDto> ordersV2() {
-        List<Order> all = orderRepository.findAll();
-        return all.stream()
+//        List<Order> all = orderRepository.findAll();
+//        return all.stream()
+//                .map(order -> new OrderDto(order))
+//                .collect(toList());
+
+        return orderRepository.findAll()
+                .stream()
                 .map(order -> new OrderDto(order))
                 .collect(Collectors.toList());
     }
 
 
+    private final OrderQueryService orderQueryService;
+
     @GetMapping("/api/v3/orders")
-    public List<OrderDto> ordersV3() {
-        List<Order> orders = orderRepository.findAllWithItem();
-        for (Order order : orders) {
-            System.err.println("order ref = " + order + " id = " + order.getId());
-        }
-        return orders.stream()
-                .map(order -> new OrderDto(order))
-                .collect(Collectors.toList());
+    public List<jpabook.jpashop.service.query.OrderDto> ordersV3() {
+//        List<Order> orders = orderRepository.findAllWithItem();
+//
+//        return orders.stream()
+//                .map(order -> new OrderDto(order))
+//                .collect(toList());
+        return orderQueryService.ordersV3();
     }
 
 
@@ -73,18 +85,46 @@ public class OrderApiController {
         }
         return orders.stream()
                 .map(order -> new OrderDto(order))
-                .collect(Collectors.toList());
+                .collect(toList());
     }
 
-
+    /* DTO로 바로 조회 */
     @GetMapping("/api/v4/orders")
     public List<OrderQueryDto> ordersV4() {
-        return orderQueryRepository.findOrderQuery();
+        return orderQueryRepository.findOrderQueryDtos();
     }
 
+    /* DTO 컬렉션 최적화 후 조회 */
     @GetMapping("/api/v5/orders")
     public List<OrderQueryDto> ordersV5() {
         return orderQueryRepository.findAllByDto_optimization();
+    }
+
+    @GetMapping("/api/v6/orders")
+    public List<OrderQueryDto> ordersV6() {
+        List<OrderFlatDto> flats = orderQueryRepository.findAllByDto_flat();
+
+        return flats.stream()
+                .collect(groupingBy(o -> getOrderQueryDto(o),
+                        mapping(o -> new OrderItemQueryDto(o.getOrderId(),
+                                o.getItemName(), o.getOrderPrice(), o.getCount()), toList())
+                )).entrySet().stream()
+                .map(e -> new OrderQueryDto(e.getKey().getOrderId(),
+                        e.getKey().getName(), e.getKey().getOrderDate(), e.getKey().getOrderStatus(),
+                        e.getKey().getAddress(), e.getValue()))
+                .collect(toList());
+
+    }
+
+    private OrderQueryDto getOrderQueryDto(OrderFlatDto o) {
+        String dateString = o.getOrderDate();
+        int year = Integer.parseInt(dateString.substring(0, 4));
+        int month = Integer.parseInt(dateString.substring(5, 7));
+        int day = Integer.parseInt(dateString.substring(8, 10));
+        int hour = Integer.parseInt(dateString.substring(11, 13));
+        int minute = Integer.parseInt(dateString.substring(14, 16));
+        int second = Integer.parseInt(dateString.substring(17, 19));
+        return new OrderQueryDto(o.getOrderId(), o.getName(), LocalDateTime.of(year, month, day, hour, minute, second), o.getOrderStatus(), o.getAddress());
     }
 
 
@@ -106,7 +146,7 @@ public class OrderApiController {
             this.address = order.getDelivery().getAddress();
             this.orderItems = order.getOrderItems().stream()
                     .map(orderItem -> new OrderItemDto(orderItem))
-                    .collect(Collectors.toList());
+                    .collect(toList());
         }
     }
 

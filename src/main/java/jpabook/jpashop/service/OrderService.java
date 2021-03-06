@@ -67,4 +67,7 @@ public class OrderService {
         return orderRepository.findAll();
     }
 
+    public Order findOrder(Long id) {
+        return orderRepository.findOne(id);
+    }
 }
